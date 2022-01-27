@@ -245,26 +245,3 @@ class BuildEmbed:
 
     def returnTeamGame(self, team):
         pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
