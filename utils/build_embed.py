@@ -17,8 +17,8 @@ class BuildEmbed:
         self.db = TinyDB('db/apiData.json')
         self.data = self.db.all()
 
-        self.logo_db = TinyDB('db/team_logo.json')
-        self.logo_data = self.logo_db.all()[0]
+        self.team_db = TinyDB('db/teamData.json')
+        self.team_data = self.team_db.all()[0]
 
         self.game_on = False
         self.league = ""
@@ -43,11 +43,22 @@ class BuildEmbed:
             self.data = self.db.all()
         print("apiData.db updated")
 
-    def validateInput(self, league):
+    def validateLeague(self, league):
         if not league:
             raise BaseException(':warning: Missing input!')
         if league not in self.LEAGUES:
             raise BaseException(':warning: League is not supported!')
+        self.league = league
+
+    def fetchTeamID(self, league, team):
+        for teamID in self.team_data[league]:
+            if team in self.team_data[league][teamID]:
+                team_abbrv = self.team_data[league][teamID][0]
+                team_full = self.team_data[league][teamID][2]
+                team_full = ' '.join(word[0].upper() + word[1:] for word in team_full.split())
+                logo = self.team_data[league][teamID][3]
+                return [teamID, team_abbrv, team_full, logo]
+        raise BaseException(':warning: No team found!')
 
     @staticmethod
     def parseTime(time_str):
@@ -74,7 +85,9 @@ class BuildEmbed:
         return team_info
 
     @staticmethod
-    def format_ls(name, ls):
+    def format_ls(name, ls, have_ot):
+        if have_ot:
+            return "\n`{:<14}|{:^4}|{:^4}|{:^4}|{:^4}|{:^4}|`".format(name, ls[0], ls[1], ls[2], ls[3], ls[4])
         return "\n`{:<14}|{:^4}|{:^4}|{:^4}|{:^4}|`".format(name, ls[0], ls[1], ls[2], ls[3])
 
     @staticmethod
@@ -91,11 +104,25 @@ class BuildEmbed:
         return f":rewind: **Last Play:** {team}{last_play['lstPlyTxt']}\n\n"
 
     def parse_lineScores(self, ls, home, away):
-        ls_base = f"\n`{' ' * 14}| 1  | 2  | 3  | 4  |`\n`{' ' * 14}|----|----|----|----|`"
-        ls_a = ls['awy'] if ls != 'null' else [""] * 4
-        ls_h = ls['hme'] if ls != 'null' else [""] * 4
+        ot_base_1 = ""
+        ot_base_2 = ""
+        have_ot = False
 
-        return ls_base + self.format_ls(away, ls_a) + self.format_ls(home, ls_h) + '\n'
+        if ls != 'null':
+            ls_a = ls['awy']
+            ls_h = ls['hme']
+            if 'OT' in ls['lbls']:
+                ot_base_1 = " OT |"
+                ot_base_2 = "----|"
+                have_ot = True
+        else:
+            ls_a = [""] * 4
+            ls_h = [""] * 4
+
+        ls_base_1 = f"\n`{' ' * 14}| 1  | 2  | 3  | 4  |{ot_base_1}`"
+        ls_base_2 = f"`{' ' * 14}|----|----|----|----|{ot_base_2}`"
+
+        return ls_base_1 + '\n' + ls_base_2 + self.format_ls(away, ls_a, have_ot) + self.format_ls(home, ls_h, have_ot) + '\n'
 
     @staticmethod
     def parse_leaders(data):
@@ -139,7 +166,7 @@ class BuildEmbed:
         ball_pos = obj['ball-pos']
         line_scores = obj['line-scores']
         leaders = obj['leaders']
-        logo_data = self.logo_data
+        logo_data = self.team_data
         league = self.league
 
         # print(self.logo_data['nba']['5'][1])
@@ -147,19 +174,17 @@ class BuildEmbed:
         line_1 = f"\n**[{away['short']} ({away['records']}) @ {home['short']} ({home['records']}) | " \
                  f"{obj['time']}]({obj['link']})**\n"
         line_2 = f"\n:clock3: **{obj['game-clock']}**\n"
-        line_3 = f"**{away['short']} {logo_data[league][away['id']][1]} {obj['scores']['away']}-" \
-                 f"{obj['scores']['home']} {logo_data[league][home['id']][1]} {home['short']}**{ball_pos}\n"
+        line_3 = f"**{away['short']} {logo_data[league][away['id']][3]} {obj['scores']['away']}-" \
+                 f"{obj['scores']['home']} {logo_data[league][home['id']][3]} {home['short']}**{ball_pos}\n"
         line_4 = line_scores + '\n' + last_play + leaders
 
         return line_1 + line_2 + line_3 + line_4
 
     def returnLiveGame(self, league=""):
-        self.validateInput(league)
-        self.league = league
+        self.validateLeague(league)
 
         game_list = []
         live_status = ['2', '22', '23']
-
         all_game = self.data[self.LEAGUE_KEY[league]]['data']['list-game']
 
         e = discord.Embed(color=discord.Color.from_rgb(228, 132, 68))
@@ -189,8 +214,7 @@ class BuildEmbed:
         return e
 
     def returnAllGame(self, league=""):
-        self.validateInput(league)
-        self.league = league
+        self.validateLeague(league)
 
         game_list = self.data[self.LEAGUE_KEY[league]]['data']['list-game']
         # print(game_list)
@@ -243,28 +267,27 @@ class BuildEmbed:
 
         return e
 
-    def returnTeamGame(self, team):
-        pass
+    def returnTeamGame(self, league, team):
+        self.validateLeague(league)
+        [team_id, team_abbrv, team_full, logo] = self.fetchTeamID(league, team)
+        all_game = self.data[self.LEAGUE_KEY[league]]['data']['list-game']
+        res = []
 
+        for game in all_game:
+            for team in game['teams']:
+                if team['id'] == team_id:
+                    res.append(game)
+                    break
 
+        e = discord.Embed(color=discord.Color.from_rgb(228, 132, 68))
+        e.set_author(name=f'{league.upper()} Team',
+                     url=os.environ.get(f'{league.upper()}_SCOREBOARD_TEAM') + team_abbrv,
+                     icon_url=os.environ.get(f'{league.upper()}_LOGO_URL'))
 
+        if res:
+            obj = self.createList(res)
+            e.add_field(name=f'{logo} {team_full}', value=self.build_field(obj[0]), inline=False)
+        else:
+            e.add_field(name=f'{logo} {team_full}', value='Team does not have game on given date', inline=False)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        return e

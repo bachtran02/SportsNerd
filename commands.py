@@ -36,6 +36,7 @@ class Commands(commands.Cog):
                 self.loop_count = 0
                 print('mailList.db updated')
             obj.updateDatabase(self.loop_count)
+
             for item in send_list:
                 # new_embed = obj.return_all_game(item['league'])
                 new_embed = obj.returnLiveGame(item['league'])
@@ -55,7 +56,7 @@ class Commands(commands.Cog):
             # print(obj.game_on)
             self.loop_count += 1
             print(self.loop_count)
-            await asyncio.sleep(10)
+            await asyncio.sleep(20)
 
     @commands.command()
     async def live(self, ctx, *, league=""):
@@ -98,8 +99,14 @@ class Commands(commands.Cog):
         msg = await ctx.send(embed=embed)
 
     @commands.command()
-    async def team(self, ctx, league="", team=""):
-        pass
+    async def team(self, ctx, league="", *, team=""):
+        try:
+            embed = BuildEmbed().returnTeamGame(league, team.strip().lower())
+        except BaseException as e:
+            await ctx.send(e)
+            return
+
+        msg = await ctx.send(embed=embed)
 
 
 def setup(bot):
