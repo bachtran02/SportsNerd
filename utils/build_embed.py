@@ -2,6 +2,7 @@ import discord
 import json
 import requests
 import os
+import time
 from datetime import datetime
 import pytz
 from tinydb import TinyDB, Query
@@ -19,29 +20,47 @@ class BuildEmbed:
 
         self.team_db = TinyDB('db/teamData.json')
         self.team_data = self.team_db.all()[0]
-
-        self.game_on = False
         self.league = ""
+        self.schedule = []
 
-    def updateDatabase(self, count):
+    def updateDatabase(self):
         # use when reset database
         # self.db.insert({'league': 'nba', 'data': ""})
         # self.db.insert({'league': 'nfl', 'data': ""})
 
         for league in self.LEAGUES:
             url = self.API_BASE_URL + league
-            # for testing purposes
-            # if count > 3:
-            #     url += '/20220124'
             response = requests.get(url)
             data = json.loads(response.text)
             # Handle 'Internal Server Error'
-            if 'Code' in data and 'Message' in data:
+            if 'list-game' not in data:
                 print(f"Code: {data['Code']}, Message: {data['Message']}")
                 continue
             self.db.update({'data': data}, self.q.league == league)
-            self.data = self.db.all()
-        print("apiData.db updated")
+
+        # if count > 2:
+        #     f_done = open('utils/finished_all.json')
+        #     data = json.load(f_done)
+        #     self.db.update({'data': data}, self.q.league == 'nba')
+        # else:
+        #     f_live = open('utils/live_game.json')
+        #     data = json.load(f_live)
+        #     self.db.update({'data': data}, self.q.league == 'nba')
+
+        self.data = self.db.all()
+        # print("apiData.db updated")
+        self.schedule = self.fetchSchedule()
+
+    def fetchSchedule(self):
+        schedule = []
+        all_game = self.data[self.LEAGUE_KEY['nba']]['data']['list-game']
+
+        for game in all_game:
+            status = game['status']['id']
+            dt_object = datetime.strptime(game['date'], '%Y-%m-%dT%H:%MZ')
+            # print(dt_object.strftime('%Y-%m-%d %H:%M'))
+            schedule.append([status, dt_object])
+        return sorted(schedule, key=lambda x: x[1])
 
     def validateLeague(self, league):
         if not league:
@@ -59,6 +78,16 @@ class BuildEmbed:
                 logo = self.team_data[league][teamID][3]
                 return [teamID, team_abbrv, team_full, logo]
         raise BaseException(':warning: No team found!')
+
+    def fetchNextDay(self, date):
+        url = f"{self.API_BASE_URL}nba/{date}"
+        data = {}
+        while 'list-game' not in data:
+            response = requests.get(url)
+            data = json.loads(response.text)
+            if 'list-game' not in data:
+                time.sleep(20)
+        return datetime.strptime(data['list-game'][0]['date'], '%Y-%m-%dT%H:%MZ')
 
     @staticmethod
     def parseTime(time_str):
@@ -187,7 +216,7 @@ class BuildEmbed:
         live_status = ['2', '22', '23']
         all_game = self.data[self.LEAGUE_KEY[league]]['data']['list-game']
 
-        e = discord.Embed(color=discord.Color.from_rgb(228, 132, 68))
+        e = discord.Embed(color=discord.Color.from_rgb(244, 131, 29))
         e.set_author(name=f'{league.upper()} Live Scores', url=os.environ.get(f'{league.upper()}_SCOREBOARD'),
                      icon_url=os.environ.get(f'{league.upper()}_LOGO_URL'))
 
@@ -197,7 +226,7 @@ class BuildEmbed:
 
         if game_list:
             order = 1
-            self.game_on = True
+            # self.game_on = True
             data_obj = self.createList(game_list)
             for obj in data_obj:
                 # Add 2 line between fields
@@ -208,7 +237,6 @@ class BuildEmbed:
             e.add_field(name="There is no live game at the moment!",
                         value=f'This message will be updated when a game is on.\n'
                               f'Use "-all {league}" to see {league.upper()} games scheduled for today')
-            self.game_on = False
         e.set_footer(text=f'Last updated: {datetime.now().strftime("%m/%d, %I:%M %p")}')
 
         return e
@@ -217,14 +245,13 @@ class BuildEmbed:
         self.validateLeague(league)
 
         game_list = self.data[self.LEAGUE_KEY[league]]['data']['list-game']
-        # print(game_list)
 
         if game_list:
             data_obj = self.createList(game_list)
         else:
             raise BaseException(':x: No game found!')
 
-        e = discord.Embed(color=discord.Color.from_rgb(228, 132, 68))
+        e = discord.Embed(color=discord.Color.from_rgb(244, 131, 29))
         e.set_author(name=f'{league.upper()} All Scores', url=os.environ.get(f'{league.upper()}_SCOREBOARD'),
                      icon_url=os.environ.get(f'{league.upper()}_LOGO_URL'))
 
@@ -235,7 +262,7 @@ class BuildEmbed:
 
         return e
 
-    def returnGameOnDate(self, league="", date=""):
+    def api_request_date(self, league, date):
         try:
             dt = datetime(int(date[:4]), int(date[4: 6]), int(date[6:8]))
         except (ValueError, IndexError):
@@ -248,14 +275,21 @@ class BuildEmbed:
         response = requests.get(url)
         data = json.loads(response.text)
 
-        game_list = data['list-game']
+        if 'list-game' not in data:
+            raise BaseException(':warning: Request failed due to API Error. Please try again')
+
+        return [data['list-game'], dt]
+
+    def returnGameOnDate(self, league="", date=""):
+
+        [game_list, dt] = self.api_request_date(league, date)
 
         if game_list:
             data_obj = self.createList(game_list)
         else:
             raise BaseException(':x: No game on given date!')
 
-        e = discord.Embed(color=discord.Color.from_rgb(228, 132, 68))
+        e = discord.Embed(color=discord.Color.from_rgb(244, 131, 29))
         e.set_author(name=f'{league.upper()} Scores on {dt.strftime("%m/%d/%Y")}',
                      url=os.environ.get(f'{league.upper()}_SCOREBOARD_DATE') + date,
                      icon_url=os.environ.get(f'{league.upper()}_LOGO_URL'))
@@ -267,10 +301,14 @@ class BuildEmbed:
 
         return e
 
-    def returnTeamGame(self, league, team):
+    def returnTeamGame(self, league, team, date):
+        dt = ""
         self.validateLeague(league)
         [team_id, team_abbrv, team_full, logo] = self.fetchTeamID(league, team)
-        all_game = self.data[self.LEAGUE_KEY[league]]['data']['list-game']
+        if date:
+            [all_game, dt] = self.api_request_date(league, date)
+        else:
+            all_game = self.data[self.LEAGUE_KEY[league]]['data']['list-game']
         res = []
 
         for game in all_game:
@@ -279,7 +317,7 @@ class BuildEmbed:
                     res.append(game)
                     break
 
-        e = discord.Embed(color=discord.Color.from_rgb(228, 132, 68))
+        e = discord.Embed(color=discord.Color.from_rgb(244, 131, 29))
         e.set_author(name=f'{league.upper()} Team',
                      url=os.environ.get(f'{league.upper()}_SCOREBOARD_TEAM') + team_abbrv,
                      icon_url=os.environ.get(f'{league.upper()}_LOGO_URL'))
@@ -288,6 +326,24 @@ class BuildEmbed:
             obj = self.createList(res)
             e.add_field(name=f'{logo} {team_full}', value=self.build_field(obj[0]), inline=False)
         else:
-            e.add_field(name=f'{logo} {team_full}', value='Team does not have game on given date', inline=False)
+            res = f'Team does not have game on {dt.strftime("%m/%d/%Y")}' if date else 'Team does not have game today'
+            e.add_field(name=f'{logo} {team_full}', value=res, inline=False)
 
         return e
+
+    @staticmethod
+    def parseTeamDate(string):
+        date = ""
+        li = string.split()
+        if not len(li):
+            raise BaseException(":warning: Input Missing")
+        if li[-1].isdigit():
+            date = li[-1]
+            li.pop(-1)
+        else:
+            return [string, ""]
+        team = " ".join(li)
+        return [team, date]
+
+
+

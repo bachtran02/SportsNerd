@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord.errors import NotFound, Forbidden
 from utils.build_embed import BuildEmbed
 from tinydb import TinyDB, Query
+from datetime import datetime, timedelta
 import asyncio
 
 
@@ -13,6 +14,7 @@ class Commands(commands.Cog):
         self.db = TinyDB('db/mailList.json')
         self.loop_count = 0
         self.mailList_updated = False
+        self.first_run = True
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -35,10 +37,12 @@ class Commands(commands.Cog):
                 self.mailList_updated = True
                 self.loop_count = 0
                 print('mailList.db updated')
-            obj.updateDatabase(self.loop_count)
+            obj.updateDatabase()
+
+            interval = self.find_interval(obj.schedule)
+            print(f"Waiting: {interval} seconds")
 
             for item in send_list:
-                # new_embed = obj.return_all_game(item['league'])
                 new_embed = obj.returnLiveGame(item['league'])
                 try:
                     channel = self.bot.get_channel(item['channel_id'])
@@ -52,11 +56,40 @@ class Commands(commands.Cog):
                     print('Inaccessible message removed')
                     continue
                 await msg.edit(embed=new_embed)
-                # print(msg)
-            # print(obj.game_on)
             self.loop_count += 1
-            print(self.loop_count)
-            await asyncio.sleep(20)
+            print("Loop count:", self.loop_count)
+            await asyncio.sleep(interval)
+
+    @staticmethod
+    def find_interval(schedule):
+        # ['1', datetime.datetime(2022, 1, 29, 0, 0)]
+
+        now = datetime.utcnow().replace(microsecond=0)
+        active_status = ['2', '22', '23']
+
+        if schedule[len(schedule) - 1][0] == '3':
+            next_day = now + timedelta(days=1) - timedelta(hours=8)
+            date = next_day.strftime("%Y%m%d")
+            next_day = BuildEmbed().fetchNextDay(date)
+            return (next_day - now).total_seconds()
+
+        for i in schedule:
+            print(i[0], i[1].strftime("%m/%d, %I:%M %p"))
+
+        for i in schedule:
+            if i[0] == '3':
+                continue
+            if i[0] in active_status or (i[0] == '1' and now > i[1]):
+                return 10
+            return (i[1] - now).total_seconds()
+
+    async def update_send_list(self, ctx):
+        channel_id = ctx.message.channel.id
+        if self.db.search(self.q.channel_id == channel_id):
+            msg_id = self.db.search(self.q.channel_id == channel_id)[0]['msg_id']
+            msg = await ctx.fetch_message(msg_id)
+            await msg.delete()
+            self.db.remove(self.q.channel_id == channel_id)
 
     @commands.command()
     async def live(self, ctx, *, league=""):
@@ -81,14 +114,6 @@ class Commands(commands.Cog):
 
         msg = await ctx.send(embed=embed)
 
-    async def update_send_list(self, ctx):
-        channel_id = ctx.message.channel.id
-        if self.db.search(self.q.channel_id == channel_id):
-            msg_id = self.db.search(self.q.channel_id == channel_id)[0]['msg_id']
-            msg = await ctx.fetch_message(msg_id)
-            await msg.delete()
-            self.db.remove(self.q.channel_id == channel_id)
-
     @commands.command()
     async def date(self, ctx, league="", date=""):
         try:
@@ -99,9 +124,10 @@ class Commands(commands.Cog):
         msg = await ctx.send(embed=embed)
 
     @commands.command()
-    async def team(self, ctx, league="", *, team=""):
+    async def team(self, ctx, league="", *, team_date=""):
         try:
-            embed = BuildEmbed().returnTeamGame(league, team.strip().lower())
+            [team, date] = BuildEmbed().parseTeamDate(team_date)
+            embed = BuildEmbed().returnTeamGame(league, team.lower(), date)
         except BaseException as e:
             await ctx.send(e)
             return
