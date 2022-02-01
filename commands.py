@@ -63,25 +63,21 @@ class Commands(commands.Cog):
     @staticmethod
     def find_interval(schedule):
         # ['1', datetime.datetime(2022, 1, 29, 0, 0)]
-
         now = datetime.utcnow().replace(microsecond=0)
         active_status = ['2', '22', '23']
-
-        if schedule[len(schedule) - 1][0] == '3':
-            next_day = now + timedelta(days=1) - timedelta(hours=8)
-            date = next_day.strftime("%Y%m%d")
-            next_day = BuildEmbed().fetchNextDay(date)
-            return (next_day - now).total_seconds()
-
-        for i in schedule:
-            print(i[0], i[1].strftime("%m/%d, %I:%M %p"))
 
         for i in schedule:
             if i[0] == '3':
                 continue
             if i[0] in active_status or (i[0] == '1' and now > i[1]):
-                return 10
-            return (i[1] - now).total_seconds()
+                return 30
+            if i[0] == '1':
+                return (i[1] - now).total_seconds()
+
+        next_day = now + timedelta(days=1) - timedelta(hours=8)
+        date = next_day.strftime("%Y%m%d")
+        next_day = BuildEmbed().fetchNextDay(date)
+        return (next_day - now).total_seconds()
 
     async def update_send_list(self, ctx):
         channel_id = ctx.message.channel.id
@@ -92,7 +88,7 @@ class Commands(commands.Cog):
             self.db.remove(self.q.channel_id == channel_id)
 
     @commands.command()
-    async def live(self, ctx, *, league=""):
+    async def live(self, ctx, league="", *, team=""):
         try:
             embed = BuildEmbed().returnLiveGame(league)
         except BaseException as e:

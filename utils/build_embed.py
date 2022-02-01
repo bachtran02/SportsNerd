@@ -60,7 +60,7 @@ class BuildEmbed:
             dt_object = datetime.strptime(game['date'], '%Y-%m-%dT%H:%MZ')
             # print(dt_object.strftime('%Y-%m-%d %H:%M'))
             schedule.append([status, dt_object])
-        return sorted(schedule, key=lambda x: x[1])
+        return schedule
 
     def validateLeague(self, league):
         if not league:
@@ -209,7 +209,7 @@ class BuildEmbed:
 
         return line_1 + line_2 + line_3 + line_4
 
-    def returnLiveGame(self, league=""):
+    def returnLiveGame(self, league):
         self.validateLeague(league)
 
         game_list = []
