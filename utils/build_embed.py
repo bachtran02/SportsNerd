@@ -29,6 +29,8 @@ class BuildEmbed:
         # self.db.insert({'league': 'nfl', 'data': ""})
 
         for league in self.LEAGUES:
+            if league == 'nfl':
+                continue
             url = self.API_BASE_URL + league
             response = requests.get(url)
             data = json.loads(response.text)
@@ -72,11 +74,11 @@ class BuildEmbed:
     def fetchTeamID(self, league, team):
         for teamID in self.team_data[league]:
             if team in self.team_data[league][teamID]:
-                team_abbrv = self.team_data[league][teamID][0]
+                team_abbr = self.team_data[league][teamID][0]
                 team_full = self.team_data[league][teamID][2]
                 team_full = ' '.join(word[0].upper() + word[1:] for word in team_full.split())
                 logo = self.team_data[league][teamID][3]
-                return [teamID, team_abbrv, team_full, logo]
+                return [teamID, team_abbr, team_full, logo]
         raise BaseException(':warning: No team found!')
 
     def fetchNextDay(self, date):
@@ -198,8 +200,6 @@ class BuildEmbed:
         logo_data = self.team_data
         league = self.league
 
-        # print(self.logo_data['nba']['5'][1])
-
         line_1 = f"\n**[{away['short']} ({away['records']}) @ {home['short']} ({home['records']}) | " \
                  f"{obj['time']}]({obj['link']})**\n"
         line_2 = f"\n:clock3: **{obj['game-clock']}**\n"
@@ -209,34 +209,50 @@ class BuildEmbed:
 
         return line_1 + line_2 + line_3 + line_4
 
-    def returnLiveGame(self, league):
+    def returnLiveGame(self, league, team):
         self.validateLeague(league)
-
+        [team_id, team_abbr, team_full, logo] = [0] * 4
         game_list = []
         live_status = ['2', '22', '23']
         all_game = self.data[self.LEAGUE_KEY[league]]['data']['list-game']
 
         e = discord.Embed(color=discord.Color.from_rgb(244, 131, 29))
-        e.set_author(name=f'{league.upper()} Live Scores', url=os.environ.get(f'{league.upper()}_SCOREBOARD'),
-                     icon_url=os.environ.get(f'{league.upper()}_LOGO_URL'))
+        if team:
+            [team_id, team_abbr, team_full, logo] = self.fetchTeamID(league, team)
+            e.set_author(name=f'{league.upper()} Team Live Scores',
+                         url=os.environ.get(f'{league.upper()}_SCOREBOARD_TEAM') + team_abbr,
+                         icon_url=os.environ.get(f'{league.upper()}_LOGO_URL'))
+        else:
+            e.set_author(name=f'{league.upper()} Live Scores', url=os.environ.get(f'{league.upper()}_SCOREBOARD'),
+                         icon_url=os.environ.get(f'{league.upper()}_LOGO_URL'))
 
         for game in all_game:
             if game['status']['id'] in live_status:
-                game_list.append(game)
+                if team:
+                    for team in game['teams']:
+                        if team['id'] == team_id:
+                            game_list.append(game)
+                            break
+                else:
+                    game_list.append(game)
 
         if game_list:
             order = 1
-            # self.game_on = True
             data_obj = self.createList(game_list)
             for obj in data_obj:
                 # Add 2 line between fields
                 # e.add_field(name="\u200b", value="\u200b", inline=False) if order != 1 else None
-                e.add_field(name=f'Game {order}', value=self.build_field(obj), inline=False)
+                header = f'{logo} {team_full}' if team else f'Game {order}'
+                e.add_field(name=header, value=self.build_field(obj), inline=False)
                 order += 1
         else:
-            e.add_field(name="There is no live game at the moment!",
-                        value=f'This message will be updated when a game is on.\n'
-                              f'Use "-all {league}" to see {league.upper()} games scheduled for today')
+            if team:
+                res = f'Team is not playing at the moment!'
+                e.add_field(name=f'{logo} {team_full}', value=res, inline=False)
+            else:
+                e.add_field(name="There is no live game at the moment!",
+                            value=f'This message will be updated when a game is on.\n'
+                                  f'Use "-all {league}" to see {league.upper()} games scheduled for today')
         e.set_footer(text=f'Last updated: {datetime.now().strftime("%m/%d, %I:%M %p")}')
 
         return e
@@ -304,7 +320,7 @@ class BuildEmbed:
     def returnTeamGame(self, league, team, date):
         dt = ""
         self.validateLeague(league)
-        [team_id, team_abbrv, team_full, logo] = self.fetchTeamID(league, team)
+        [team_id, team_abbr, team_full, logo] = self.fetchTeamID(league, team)
         if date:
             [all_game, dt] = self.api_request_date(league, date)
         else:
@@ -319,7 +335,7 @@ class BuildEmbed:
 
         e = discord.Embed(color=discord.Color.from_rgb(244, 131, 29))
         e.set_author(name=f'{league.upper()} Team',
-                     url=os.environ.get(f'{league.upper()}_SCOREBOARD_TEAM') + team_abbrv,
+                     url=os.environ.get(f'{league.upper()}_SCOREBOARD_TEAM') + team_abbr,
                      icon_url=os.environ.get(f'{league.upper()}_LOGO_URL'))
 
         if res:

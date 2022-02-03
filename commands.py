@@ -43,7 +43,7 @@ class Commands(commands.Cog):
             print(f"Waiting: {interval} seconds")
 
             for item in send_list:
-                new_embed = obj.returnLiveGame(item['league'])
+                new_embed = obj.returnLiveGame(item['league'], item['team'])
                 try:
                     channel = self.bot.get_channel(item['channel_id'])
                     msg = await channel.fetch_message(item['msg_id'])
@@ -70,7 +70,7 @@ class Commands(commands.Cog):
             if i[0] == '3':
                 continue
             if i[0] in active_status or (i[0] == '1' and now > i[1]):
-                return 30
+                return 45
             if i[0] == '1':
                 return (i[1] - now).total_seconds()
 
@@ -90,14 +90,14 @@ class Commands(commands.Cog):
     @commands.command()
     async def live(self, ctx, league="", *, team=""):
         try:
-            embed = BuildEmbed().returnLiveGame(league)
+            embed = BuildEmbed().returnLiveGame(league, team)
         except BaseException as e:
             await ctx.send(e)
             return
         # print(ctx.message)
         await self.update_send_list(ctx)
         msg = await ctx.send(embed=embed)
-        self.db.insert({'msg_id': msg.id, 'channel_id': msg.channel.id, 'league': league})
+        self.db.insert({'msg_id': msg.id, 'channel_id': msg.channel.id, 'league': league, 'team': team})
         self.mailList_updated = False
 
     @commands.command()
