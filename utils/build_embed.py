@@ -25,8 +25,8 @@ class BuildEmbed:
 
     def updateDatabase(self):
         # use when reset database
-        # self.db.insert({'league': 'nba', 'data': ""})
-        # self.db.insert({'league': 'nfl', 'data': ""})
+        self.db.insert({'league': 'nba', 'data': ""})
+        self.db.insert({'league': 'nfl', 'data': ""})
 
         for league in self.LEAGUES:
             if league == 'nfl':
@@ -39,15 +39,6 @@ class BuildEmbed:
                 print(f"Code: {data['Code']}, Message: {data['Message']}")
                 continue
             self.db.update({'data': data}, self.q.league == league)
-
-        # if count > 2:
-        #     f_done = open('utils/finished_all.json')
-        #     data = json.load(f_done)
-        #     self.db.update({'data': data}, self.q.league == 'nba')
-        # else:
-        #     f_live = open('utils/live_game.json')
-        #     data = json.load(f_live)
-        #     self.db.update({'data': data}, self.q.league == 'nba')
 
         self.data = self.db.all()
         # print("apiData.db updated")
