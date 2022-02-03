@@ -244,7 +244,7 @@ class BuildEmbed:
                 e.add_field(name="There is no live game at the moment!",
                             value=f'This message will be updated when a game is on.\n'
                                   f'Use "-all {league}" to see {league.upper()} games scheduled for today')
-        e.set_footer(text=f'Last updated: {datetime.now().strftime("%m/%d, %I:%M %p")}')
+        e.set_footer(text=f'Last updated: {(datetime.now() - timedelta(hours=8)).strftime("%m/%d, %I:%M %p")}')
 
         return e
 
