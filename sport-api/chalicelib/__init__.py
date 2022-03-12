@@ -87,7 +87,7 @@ class ESPNScraper:
         all_games = self.fetchAllGames()
         list_game = []
 
-        print(all_games)
+        # print(all_games)
 
         for game in all_games:
             list_game.append(self.parseOneGame(game))

@@ -6,7 +6,7 @@ load_dotenv()
 
 bot = commands.Bot(command_prefix="-", case_insensitive=True, help_command=None)
 
-extensions = ['commands']
+extensions = ['Commands']
 count = 0
 for ext in extensions:
     bot.load_extension(f"{ext}")

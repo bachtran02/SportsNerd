@@ -1,9 +1,7 @@
-import discord
 from discord.ext import commands
 from discord.errors import NotFound, Forbidden
-from utils.build_embed import BuildEmbed
+from utils.Embed import Embed
 from tinydb import TinyDB, Query
-from datetime import datetime, timedelta
 import asyncio
 
 
@@ -30,23 +28,43 @@ class Commands(commands.Cog):
 
     async def update_score(self):
         send_list = []
-        obj = BuildEmbed()
+        obj = Embed()
         while True:
             if not self.mailList_updated:
                 send_list = self.db.all()
                 self.mailList_updated = True
                 self.loop_count = 0
                 print('mailList.db updated')
-            obj.updateDatabase()
+            push_mes = await obj.updateDatabase()
+            push_embed = ""
 
-            interval = self.find_interval(obj.schedule)
+            interval = obj.findInterval()
             print(f"Waiting: {interval} seconds")
 
             for item in send_list:
-                new_embed = obj.returnLiveGame(item['league'], item['team'])
+                new_embed, team_id = obj.returnLiveGame(item['league'], item['team'])
+                for key in push_mes:
+                    if team_id in key:
+                        push_embed = obj.returnPushMessage(push_mes[key], item['league'])
+                        break
+
                 try:
-                    channel = self.bot.get_channel(item['channel_id'])
-                    msg = await channel.fetch_message(item['msg_id'])
+                    # message in server
+                    if item['guild']:
+                        channel = self.bot.get_channel(item['channel_id'])
+                        msg = await channel.fetch_message(item['msg_id'])
+                        if push_embed:
+                            channel.send(embed=push_embed)
+
+                    # message in private chat
+                    else:
+                        user = await self.bot.fetch_user(item['user_id'])
+                        channel = user.dm_channel
+                        if not channel:
+                            channel = await user.create_dm()
+                        msg = await channel.fetch_message(item['msg_id'])
+                        if push_embed:
+                            channel.send(embed=push_embed)
                     if not msg.embeds:
                         await msg.delete()
                         raise NotFound
@@ -56,28 +74,10 @@ class Commands(commands.Cog):
                     print('Inaccessible message removed')
                     continue
                 await msg.edit(embed=new_embed)
+                # send push embed
             self.loop_count += 1
             print("Loop count:", self.loop_count)
             await asyncio.sleep(interval)
-
-    @staticmethod
-    def find_interval(schedule):
-        # ['1', datetime.datetime(2022, 1, 29, 0, 0)]
-        now = datetime.utcnow().replace(microsecond=0)
-        active_status = ['2', '22', '23']
-
-        for i in schedule:
-            if i[0] == '3':
-                continue
-            if i[0] in active_status or (i[0] == '1' and now > i[1]):
-                return 45
-            if i[0] == '1':
-                return (i[1] - now).total_seconds()
-
-        next_day = now + timedelta(days=1) - timedelta(hours=8)
-        date = next_day.strftime("%Y%m%d")
-        next_day = BuildEmbed().fetchNextDay(date)
-        return (next_day - now).total_seconds()
 
     async def update_send_list(self, ctx):
         channel_id = ctx.message.channel.id
@@ -90,47 +90,48 @@ class Commands(commands.Cog):
     @commands.command()
     async def live(self, ctx, league="", *, team=""):
         try:
-            embed = BuildEmbed().returnLiveGame(league, team)
+            embed, team_id = Embed().returnLiveGame(league, team)
         except BaseException as e:
             await ctx.send(e)
             return
-        # print(ctx.message)
-        await self.update_send_list(ctx)
+
         msg = await ctx.send(embed=embed)
-        self.db.insert({'msg_id': msg.id, 'channel_id': msg.channel.id, 'league': league, 'team': team})
+        await self.update_send_list(ctx)
+        # await ctx.message.author.send("Sup")
+        self.db.insert({'user_id': ctx.message.author.id, 'msg_id': msg.id, 'channel_id': msg.channel.id,
+                        'guild': msg.guild.id if msg.guild else None, 'league': league, 'team': team_id})
         self.mailList_updated = False
 
     @commands.command()
     async def all(self, ctx, *, league=""):
         try:
-            embed = BuildEmbed().returnAllGame(league)
+            embed = Embed().returnAllGame(league)
         except BaseException() as e:
             await ctx.send(e)
             return
 
-        msg = await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def date(self, ctx, league="", date=""):
         try:
-            embed = BuildEmbed().returnGameOnDate(league, date)
+            embed = Embed().returnGameOnDate(league, date)
         except BaseException as e:
             await ctx.send(e)
             return
-        msg = await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def team(self, ctx, league="", *, team_date=""):
         try:
-            [team, date] = BuildEmbed().parseTeamDate(team_date)
-            embed = BuildEmbed().returnTeamGame(league, team.lower(), date)
+            [team, date] = Embed().parseTeamDate(team_date)
+            embed = Embed().returnTeamGame(league, team.lower(), date)
         except BaseException as e:
             await ctx.send(e)
             return
 
-        msg = await ctx.send(embed=embed)
+        await ctx.send(embed=embed)
 
 
 def setup(bot):
     bot.add_cog(Commands(bot))
-
