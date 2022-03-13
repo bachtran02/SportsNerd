@@ -58,6 +58,7 @@ class ESPNScraper:
 
     # parse data return for one game
     def parseOneGame(self, game):
+        key_set = set(game.keys())
         one_game = {
             'id': game['id'],
             'date': game['date'],
@@ -70,15 +71,14 @@ class ESPNScraper:
                 'home': game['teams'][0]['score'] if 'score' in game['teams'][0] else " "
             },
             'line-scores': game['lnescrs'] if game['status']['id'] != '1' else 'null',
-            'last-play': game['lstPly'] if game['status']['id'] == '2' else 'null',
+            'last-play': game['lstPly'] if 'lstPly' in key_set and game['status']['id'] == '2' else 'null',
             'ball-pos': self.parseBallPos(game),
-
             'teams': game['teams'],
             'venue': game['vnue'],
             'league': self.parseLeague(game['watchListen']['cmpttn']['lg'],
                                        game['watchListen']['cmpttn']['sprt']),
             'allStar': game['allStr'],
-            'leaders': game['ldrs'],
+            'leaders': game['ldrs'] if 'ldrs' in key_set else []
         }
 
         return one_game
