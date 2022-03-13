@@ -44,20 +44,23 @@ class Data:
 
         game_list = {}
         stop_comb = {('2', '22'), ('2', '23'), ('2', '3')}
-        start_comb = {('1', '2'), ('22', '2'), ('23', '2')}
+        start_comb = {('1', '2'), ('23', '2')}
         for (prev, curr) in zip(prev_data, curr_data):
-            teams = [curr['teams'][0]['id'], curr['teams'][1]['id']]
+            teams = (curr['teams'][0]['id'], curr['teams'][1]['id'])
             prev_state = prev['status']['id']
             curr_state = curr['status']['id']
 
-            if (prev_state, curr_state) in stop_comb.union(start_comb):
-                # game start or restart
-                if (prev_state, curr_state) in start_comb:
-                    quarter = ""
-                    if '-' in curr['status']['detail']:
-                        quarter = curr['status']['detail'].split('-')[1].strip()
-                    curr['status']['detail'] = f"Start of {quarter}"
+            if (prev_state, curr_state) in stop_comb:
                 game_list[teams] = curr
+
+            if (prev_state, curr_state) in start_comb:
+                if prev['status']['id'] == '1':
+                    prev['status']['id'] = '12'
+                    prev['status']['detail'] = "Start of 1st"
+                elif prev['status']['id'] == '23':
+                    prev['status']['detail'] = "Start of 3rd"
+                prev['last-play'] = "null"
+                game_list[teams] = prev
         return game_list
 
     def findInterval(self):

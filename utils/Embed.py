@@ -109,8 +109,7 @@ class Embed(Data):
             res.append({
                 'link': os.environ.get(f'{self.league.upper()}_GAME_BASE_URL') + game['id'],
                 'time': self.parseTime(game['date']),
-                'game-clock': game['status']['detail'] if game['status']['id'] != '1'
-                else 'Game is yet to begin',
+                'game-clock': game['status']['detail'] if game['status']['id'] != '1' else 'Game is yet to begin',
                 'home-team': team_info['home'],
                 'away-team': team_info['away'],
                 'scores': game['score'],
@@ -261,5 +260,5 @@ class Embed(Data):
                      icon_url=os.environ.get(f'{league.upper()}_LOGO_URL'))
 
         obj = self.createList([game])
-        e.add_field(name=f'Live Update', value=self.build_field(obj[0]), inline=False)
+        e.add_field(name=f'Live Notification', value=self.build_field(obj[0]), inline=False)
         return e

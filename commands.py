@@ -54,7 +54,7 @@ class Commands(commands.Cog):
                         channel = self.bot.get_channel(item['channel_id'])
                         msg = await channel.fetch_message(item['msg_id'])
                         if push_embed:
-                            channel.send(embed=push_embed)
+                            await channel.send(embed=push_embed)
 
                     # message in private chat
                     else:
@@ -64,7 +64,7 @@ class Commands(commands.Cog):
                             channel = await user.create_dm()
                         msg = await channel.fetch_message(item['msg_id'])
                         if push_embed:
-                            channel.send(embed=push_embed)
+                            await channel.send(embed=push_embed)
                     if not msg.embeds:
                         await msg.delete()
                         raise NotFound

@@ -130,7 +130,8 @@ dmypy.json
 .pyre/
 
 # Database
-# db/
+db/apiData.json
+db/mailList.json
 
 # Others
 others/
