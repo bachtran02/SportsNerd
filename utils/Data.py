@@ -20,7 +20,7 @@ class Data:
         self.data = {'nba': {}, 'nfl': {}}
 
     async def updateDatabase(self):
-        push_mes = []
+        push_data = []
         for league in self.LEAGUES:
             url = self.API_BASE_URL + league
             response = requests.get(url)
@@ -32,10 +32,10 @@ class Data:
                 response = requests.get(url)
                 data = json.loads(response.text)
 
-            push_mes = self.compareMap(self.data[league]['list-game'], data['list-game'])
+            push_data = self.compareMap(self.data[league]['list-game'], data['list-game'])
             self.db.update({'data': data}, self.q.league == league)
         self.data['nba'] = self.db.all()[0]['data']
-        return push_mes
+        return push_data
 
     @staticmethod
     def compareMap(prev_data, curr_data):
@@ -80,6 +80,7 @@ class Data:
                 continue
             if i[0] in active_status or (i[0] == '1' and now > i[1]):
                 return 45
+            # TODO: Check for possible error
             if i[0] == '1':
                 return (i[1] - now).total_seconds()
 

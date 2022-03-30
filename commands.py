@@ -1,4 +1,5 @@
 from discord.ext import commands
+from discord.ext.commands.errors import CommandNotFound
 from discord.errors import NotFound, Forbidden
 from utils.Embed import Embed
 from tinydb import TinyDB, Query
@@ -9,10 +10,9 @@ class Commands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.q = Query()
-        self.db = TinyDB('db/mailList.json')
+        self.sendList = TinyDB('db/mailList.json')
         self.loop_count = 0
         self.mailList_updated = False
-        self.first_run = True
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -31,75 +31,115 @@ class Commands(commands.Cog):
         obj = Embed()
         while True:
             if not self.mailList_updated:
-                send_list = self.db.all()
+                send_list = self.sendList.all()
                 self.mailList_updated = True
                 self.loop_count = 0
                 print('mailList.db updated')
-            push_mes = await obj.updateDatabase()
+            push_data = await obj.updateDatabase()
             push_embed = ""
 
             interval = obj.findInterval()
             print(f"Waiting: {interval} seconds")
 
             for item in send_list:
-                new_embed, team_id = obj.returnLiveGame(item['league'], item['team'])
-                for key in push_mes:
-                    if team_id in key:
-                        push_embed = obj.returnPushMessage(push_mes[key], item['league'])
-                        break
-
+                new_embed = ""
+                if item['type'] == 'update':
+                    for key in push_data:
+                        if item['team_id'] in key:
+                            push_embed = obj.returnPushMessage(push_data[key], item['league'])
+                            break
+                else:
+                    [new_embed, _] = obj.returnLiveGame(item['league'], item['team_id'])
                 try:
                     # message in server
-                    if item['guild']:
+                    if item['guild_id']:
                         channel = self.bot.get_channel(item['channel_id'])
-                        msg = await channel.fetch_message(item['msg_id'])
-                        if push_embed:
-                            await channel.send(embed=push_embed)
 
+                        if item['type'] == 'update':
+                            if push_embed:
+                                await channel.send(embed=push_embed)
+                            continue
+
+                        msg = await channel.fetch_message(item['msg_id'])
                     # message in private chat
                     else:
                         user = await self.bot.fetch_user(item['user_id'])
                         channel = user.dm_channel
                         if not channel:
                             channel = await user.create_dm()
+
+                        if item['type'] == 'update':
+                            if push_embed:
+                                await channel.send(embed=push_embed)
+                            continue
+
                         msg = await channel.fetch_message(item['msg_id'])
-                        if push_embed:
-                            await channel.send(embed=push_embed)
                     if not msg.embeds:
                         await msg.delete()
                         raise NotFound
                 except (NotFound, AttributeError, TypeError, Forbidden):
-                    self.db.remove(self.q.channel_id == item['channel_id'])
+                    self.sendList.remove(self.q.channel_id == item['channel_id'])
                     self.mailList_updated = False
                     print('Inaccessible message removed')
                     continue
                 await msg.edit(embed=new_embed)
-                # send push embed
             self.loop_count += 1
             print("Loop count:", self.loop_count)
             await asyncio.sleep(interval)
 
-    async def update_send_list(self, ctx):
-        channel_id = ctx.message.channel.id
-        if self.db.search(self.q.channel_id == channel_id):
-            msg_id = self.db.search(self.q.channel_id == channel_id)[0]['msg_id']
-            msg = await ctx.fetch_message(msg_id)
-            await msg.delete()
-            self.db.remove(self.q.channel_id == channel_id)
+    async def update_send_list(self, ctx, group, team_id=""):
+        if group == 'live':
+            channel_id = ctx.message.channel.id
+            if self.sendList.search(self.q.channel_id == channel_id):
+                msg_id = self.sendList.search(self.q.channel_id == channel_id)[0]['msg_id']
+                msg = await ctx.fetch_message(msg_id)
+                await msg.delete()
+                self.sendList.remove(self.q.channel_id == channel_id)
+        if group == 'update':
+            guild_id = ctx.message.guild.id if ctx.message.guild else ""
+            # DM channel
+            if not guild_id:
+                channel_id = ctx.message.channel.id
+                if self.sendList.search(self.q.fragment({'channel_id': channel_id, 'team_id': team_id})):
+                    await ctx.send(":warning: Team already followed")
+                    return False
+            else:
+                if self.sendList.search(self.q.fragment({'guild_id': guild_id, 'team_id': team_id})):
+                    await ctx.send(":warning: Team already followed")
+                    return False
+        return True
 
     @commands.command()
     async def live(self, ctx, league="", *, team=""):
         try:
-            embed, team_id = Embed().returnLiveGame(league, team)
+            [embed, team_id] = Embed().returnLiveGame(league, team)
         except BaseException as e:
             await ctx.send(e)
             return
 
         msg = await ctx.send(embed=embed)
-        await self.update_send_list(ctx)
-        # await ctx.message.author.send("Sup")
-        self.db.insert({'user_id': ctx.message.author.id, 'msg_id': msg.id, 'channel_id': msg.channel.id,
-                        'guild': msg.guild.id if msg.guild else None, 'league': league, 'team': team_id})
+        _ = await self.update_send_list(ctx, "live")
+        guild_id = msg.guild.id if msg.guild else ""
+        self.sendList.insert({'user_id': ctx.message.author.id, 'msg_id': msg.id, 'channel_id': msg.channel.id,
+                              'guild_id': guild_id, 'league': league, 'team_id': team_id, 'type': 'live'})
+        self.mailList_updated = False
+
+    @commands.command()
+    async def update(self, ctx, league="", *, team=""):
+        try:
+            [team_id, _, team_full, logo] = Embed().fetchTeamID(league, team)
+        except BaseException as e:
+            await ctx.send(e)
+            return
+
+        to_add = await self.update_send_list(ctx, "update", team_id)
+
+        if to_add:
+            embed = Embed.addSuccessful(team_full, logo, league)
+            msg = await ctx.send(embed=embed)
+            guild_id = msg.guild.id if msg.guild else ""
+            self.sendList.insert({'user_id': ctx.message.author.id, 'channel_id': msg.channel.id,
+                                  'guild_id': guild_id, 'league': league, 'team_id': team_id, 'type': 'update'})
         self.mailList_updated = False
 
     @commands.command()
@@ -131,6 +171,13 @@ class Commands(commands.Cog):
             return
 
         await ctx.send(embed=embed)
+
+    @staticmethod
+    @commands.Cog.listener()
+    async def on_command_error(ctx, error):
+        if isinstance(error, CommandNotFound):
+            return
+        raise error
 
 
 def setup(bot):

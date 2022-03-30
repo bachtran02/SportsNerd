@@ -142,7 +142,7 @@ class Embed(Data):
 
     def returnLiveGame(self, league, team):
         self.validateLeague(league)
-        [team_id, team_abbr, team_full, logo] = [0] * 4
+        [team_id, team_abbr, team_full, logo] = [""] * 4
         game_list = []
         live_status = ['2', '22', '23']
         all_game = self.data[league]['list-game']
@@ -182,9 +182,9 @@ class Embed(Data):
                 e.add_field(name="There is no live game at the moment!",
                             value=f'This message will be updated when a game is on.\n'
                                   f'Use "-all {league}" to see {league.upper()} games scheduled for today')
-        e.set_footer(text=f'Last updated: {datetime.now().strftime("%m/%d, %I:%M %p")}')
+        e.set_footer(text=f'Last updated: {datetime.now().strftime("%m/%d, %I:%M %p")} PST')
 
-        return e, team_id
+        return [e, team_id]
 
     def returnAllGame(self, league=""):
         self.validateLeague(league)
@@ -262,3 +262,13 @@ class Embed(Data):
         obj = self.createList([game])
         e.add_field(name=f'Live Notification', value=self.build_field(obj[0]), inline=False)
         return e
+
+    @staticmethod
+    def addSuccessful(name, logo, league):
+        e = discord.Embed(color=discord.Color.from_rgb(244, 131, 29))
+        e.set_author(name=f'{league.upper()} Live Update', icon_url=os.environ.get(f'{league.upper()}_LOGO_URL'))
+        mes = "Add successfully!\nYou wil receive match updates when team plays"
+        e.add_field(name=f'{logo} {name}', value=mes, inline=False)
+        return e
+
+
