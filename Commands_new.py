@@ -1,7 +1,7 @@
 from discord.ext import commands
-from lib.MessageContent import MessageContent
-from lib.Database import Database
-from lib.InputParser import InputParser
+from library.MessageContent import MessageContent
+from library.Database import Database
+from library.InputParser import InputParser
 
 
 class Commands(commands.Cog):

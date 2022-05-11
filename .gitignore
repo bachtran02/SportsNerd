@@ -15,7 +15,7 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
+library/
 lib64/
 parts/
 sdist/
@@ -132,6 +132,7 @@ dmypy.json
 # Database
 db/apiData.json
 db/mailList.json
+db/prevApiData.json
 
 # Others
 others/
