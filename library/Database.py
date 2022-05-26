@@ -4,20 +4,22 @@ import json
 import asyncio
 import time
 from tinydb import TinyDB, Query
-from db.TeamData import TEAM_DATA
 from discord.ext import tasks
 from datetime import datetime, timedelta
+from discord.ext import commands
+
+from library.LiveUpdate import LiveUpdate
 
 
 # update database and stuff
-class Database:
-    def __init__(self):
+class Database(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
         self.API_BASE_URL = os.environ.get('API_BASE_URL')
         self.LEAGUES = ['nba']  # ['nba', 'nfl']
         self.q = Query()
         self.db = TinyDB('db/apiData.json')
         self.prev_db = TinyDB('db/prevApiData.json')
-        self.team_data = TEAM_DATA
         self.updateDatabase.start()
 
         # self.db.insert({'league': 'nfl', 'data': {}})
@@ -41,8 +43,9 @@ class Database:
             self.db.update({'data': data}, self.q.league == league)
 
         next_interval = round(self.findInterval())
-        # print(next_interval)
+        print(next_interval)
         self.updateDatabase.change_interval(seconds=next_interval)
+        await LiveUpdate(self.bot).send_interval_update()
 
     def getChanges(self):
         game_with_changes = {}
@@ -80,19 +83,9 @@ class Database:
                 game_with_changes[teams] = prev
         return game_with_changes
 
-    def getTeamInfo(self, league, team):
-        for teamID in self.team_data[league]:
-            if team in self.team_data[league][teamID][:3] or teamID == team:
-                team_abbr = self.team_data[league][teamID][0]
-                team_full = self.team_data[league][teamID][2]
-                team_full = ' '.join(word[0].upper() + word[1:] for word in team_full.split())
-                logo = self.team_data[league][teamID][3]
-                return [teamID, team_abbr, team_full, logo]
-        raise Exception(':warning: No team found!')
-
     def findInterval(self):
         schedule = []
-        all_game = self.db.all()[0]['data']['list-game']  # get NBA games
+        all_game = self.db.all()[0]['data']['list-game']  # get NBA games, change this once NFL season starts
 
         for game in all_game:
             status = game['status']['id']
@@ -125,3 +118,7 @@ class Database:
             if 'list-game' not in data:
                 time.sleep(20)
         return datetime.strptime(data['list-game'][0]['date'], '%Y-%m-%dT%H:%MZ')
+
+
+def setup(bot):
+    bot.add_cog(Database(bot))

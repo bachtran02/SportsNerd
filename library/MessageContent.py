@@ -3,7 +3,7 @@ import os
 from tinydb import TinyDB
 from datetime import datetime
 from library.GameField import GameField
-from library.Database import Database
+from library.Utils import getTeamInfo
 
 
 class MessageContent:
@@ -47,11 +47,11 @@ class MessageContent:
         return e
 
     def returnTeamGame(self, team="", date=""):
-        [team_id, team_abbr, team_full, logo] = Database().getTeamInfo(self.league, team)
+        [team_id, team_abbr, team_full, logo] = getTeamInfo(self.league, team)
         title = f'{self.league.upper()} Team'
         url = os.environ.get(f'{self.league.upper()}_SCOREBOARD_TEAM') + team_abbr
         icon_url = os.environ.get(f'{self.league.upper()}_LOGO_URL')
-        e = self.createEmbed(title, url, icon_url)
+        e = self.createEmbed(title, url, icon_url, )
         found = False
         if date:
             # TODO: add this
@@ -79,15 +79,15 @@ class MessageContent:
         live_status = ['2', '22', '23']
         [team_id, team_abbr, team_full, logo] = [""] * 4
         if team:
-            [team_id, team_abbr, team_full, logo] = Database().getTeamInfo(self.league, team)
+            [team_id, team_abbr, team_full, logo] = getTeamInfo(self.league, team)
             title = f'{self.league.upper()} Team Live Score'
             url = os.environ.get(f'{self.league.upper()}_SCOREBOARD_TEAM') + team_abbr
         else:
             title = f'{self.league.upper()} Live Scores'
             url = os.environ.get(f'{self.league.upper()}_SCOREBOARD')
         icon_url = os.environ.get(f'{self.league.upper()}_LOGO_URL')
-
-        e = self.createEmbed(title, url, icon_url)
+        last_updated = f'Last updated: {datetime.now().strftime("%m/%d, %I:%M %p")} PST'
+        e = self.createEmbed(title, url, icon_url, last_updated)
         found = False
         for item in self.data:
             if item['league'] == self.league:
@@ -112,4 +112,4 @@ class MessageContent:
                 self.noGame(e, 'There is no live game at the moment!',
                             f'This message will be updated when a game is on.\n'
                             f'Use "-all {self.league}" to see {self.league.upper()} games scheduled for today')
-        return e
+        return [e, team_id]

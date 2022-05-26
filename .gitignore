@@ -131,7 +131,7 @@ dmypy.json
 
 # Database
 db/apiData.json
-db/mailList.json
+db/sendList/
 db/prevApiData.json
 
 # Others
