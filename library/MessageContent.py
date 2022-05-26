@@ -18,7 +18,6 @@ class MessageContent:
         embed.set_author(name=title, url=url, icon_url=icon_url)
         if footer:
             embed.set_footer(text=footer)
-
         return embed
 
     @staticmethod
@@ -74,4 +73,43 @@ class MessageContent:
         if not found:
             self.noGame(e, f'{logo} {team_full}', f"Team does not have game {dt}")
 
+        return e
+
+    def returnLiveGame(self, team):
+        live_status = ['2', '22', '23']
+        [team_id, team_abbr, team_full, logo] = [""] * 4
+        if team:
+            [team_id, team_abbr, team_full, logo] = Database().getTeamInfo(self.league, team)
+            title = f'{self.league.upper()} Team Live Score'
+            url = os.environ.get(f'{self.league.upper()}_SCOREBOARD_TEAM') + team_abbr
+        else:
+            title = f'{self.league.upper()} Live Scores'
+            url = os.environ.get(f'{self.league.upper()}_SCOREBOARD')
+        icon_url = os.environ.get(f'{self.league.upper()}_LOGO_URL')
+
+        e = self.createEmbed(title, url, icon_url)
+        found = False
+        for item in self.data:
+            if item['league'] == self.league:
+                game_list = item['data']['list-game']
+                for game in game_list:
+                    count = 1
+                    if not game['status']['id'] in live_status:
+                        continue
+                    found = True
+                    if team:
+                        for team in game['teams']:
+                            if team['id'] == team_id:
+                                GameField(game).add(name=f'{logo} {team_full}', embed=e)
+                                break
+                    else:
+                        GameField(game).add(e, f"Game {count}")
+                        count += 1
+        if not found:
+            if team:
+                self.noGame(e, f'{logo} {team_full}', f"Team is not playing at the moment!")
+            else:
+                self.noGame(e, 'There is no live game at the moment!',
+                            f'This message will be updated when a game is on.\n'
+                            f'Use "-all {self.league}" to see {self.league.upper()} games scheduled for today')
         return e

@@ -2,20 +2,28 @@ import os
 import requests
 import json
 import asyncio
+import time
 from tinydb import TinyDB, Query
 from db.TeamData import TEAM_DATA
+from discord.ext import tasks
+from datetime import datetime, timedelta
 
 
 # update database and stuff
 class Database:
     def __init__(self):
         self.API_BASE_URL = os.environ.get('API_BASE_URL')
-        self.LEAGUES = ['nba']
+        self.LEAGUES = ['nba']  # ['nba', 'nfl']
         self.q = Query()
         self.db = TinyDB('db/apiData.json')
         self.prev_db = TinyDB('db/prevApiData.json')
         self.team_data = TEAM_DATA
+        self.updateDatabase.start()
 
+        # self.db.insert({'league': 'nfl', 'data': {}})
+        # self.prev_db.insert({'league': 'nfl', 'data': {}})
+
+    @tasks.loop(seconds=1.0)  # initial interval, after the first loop interval will be updated
     async def updateDatabase(self):
         for league in self.LEAGUES:
             url = self.API_BASE_URL + league
@@ -31,6 +39,10 @@ class Database:
             prev_data = self.db.search(self.q.league == league)[0]['data']
             self.prev_db.update({'data': prev_data}, self.q.league == league)
             self.db.update({'data': data}, self.q.league == league)
+
+        next_interval = round(self.findInterval())
+        # print(next_interval)
+        self.updateDatabase.change_interval(seconds=next_interval)
 
     def getChanges(self):
         game_with_changes = {}
@@ -77,3 +89,39 @@ class Database:
                 logo = self.team_data[league][teamID][3]
                 return [teamID, team_abbr, team_full, logo]
         raise Exception(':warning: No team found!')
+
+    def findInterval(self):
+        schedule = []
+        all_game = self.db.all()[0]['data']['list-game']  # get NBA games
+
+        for game in all_game:
+            status = game['status']['id']
+            dt_object = datetime.strptime(game['date'], '%Y-%m-%dT%H:%MZ')
+            schedule.append([status, dt_object])
+
+        now = datetime.utcnow()
+        active_status = ['2', '22', '23']
+
+        for i in schedule:
+            if i[0] == '3':
+                continue
+            if i[0] in active_status or (i[0] == '1' and now > i[1]):
+                return 45
+            # TODO: Check for possible error
+            if i[0] == '1':
+                return (i[1] - now).total_seconds()
+
+        next_day = now + timedelta(days=1) - timedelta(hours=8)
+        date = next_day.strftime("%Y%m%d")
+        next_day = self.fetchNextDay(date)
+        return (next_day - now).total_seconds()
+
+    def fetchNextDay(self, date):
+        url = f"{self.API_BASE_URL}nba/{date}"
+        data = {}
+        while 'list-game' not in data:
+            response = requests.get(url)
+            data = json.loads(response.text)
+            if 'list-game' not in data:
+                time.sleep(20)
+        return datetime.strptime(data['list-game'][0]['date'], '%Y-%m-%dT%H:%MZ')

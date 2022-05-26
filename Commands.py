@@ -16,7 +16,7 @@ class Commands(commands.Cog):
         print(f'Logged in as: {self.bot.user.name}')
         print(f'With ID: {self.bot.user.id}')
         print('--------------------------')
-        await Database().updateDatabase()
+        Database()
 
     @commands.command()
     async def all(self, ctx, *, league=""):
@@ -29,10 +29,15 @@ class Commands(commands.Cog):
         e = MessageContent(league).returnTeamGame(team, date)
         await ctx.send(embed=e)
 
+    @commands.command()
+    async def live(self, ctx, league="", *, team=""):
+        e = MessageContent(league).returnLiveGame(team)
+        await ctx.send(embed=e)
+
     # test function
     @commands.command()
     async def ping(self, ctx):
-        await ctx.send("pong")
+        await ctx.send("pong!")
 
 
 def setup(bot):
