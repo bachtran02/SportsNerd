@@ -18,7 +18,7 @@ class GameField:
         self.leaders = self.parseLeaders(game_dict['leaders'])
 
     def add(self, embed, name):
-        value = self.link + self.game_clock + self.display_score + self.line_scores + self.leaders
+        value = self.link + self.game_clock + self.display_score + self.line_scores + self.last_play + self.leaders
         embed.add_field(name=name, value=value, inline=False)
 
     @staticmethod
@@ -68,7 +68,7 @@ class GameField:
         have_ot = False
         ls_base_1 = f"{' ' * 14}| 1  | 2  | 3  | 4  |"
         ls_base_2 = f"{' ' * 14}|----|----|----|----|"
-        teams = [self.home['short'], self.away['short']]
+        teams = [self.away['short'], self.home['short']]
 
         ls_data = []
         ls_list = []
@@ -97,7 +97,7 @@ class GameField:
         if last_play == "null":
             return ""
         team = f"({last_play['tmAbbrv']}) " if 'tmAbbrv' in last_play else ""
-        return f":rewind: **Last Play:** {team}{last_play['lstPlyTxt']}\n"
+        return f":rewind: **Last Play:** {team}{last_play['lstPlyTxt']}\n\n"
 
     @staticmethod
     def parseLeaders(data):

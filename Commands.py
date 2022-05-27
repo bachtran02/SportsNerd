@@ -1,6 +1,6 @@
 from discord.ext import commands
 from library.MessageContent import MessageContent
-from library.Database import Database
+from library.Utils import getTeamInfo
 from library.InputParser import InputParser
 from library.SendList import SendList
 
@@ -17,7 +17,6 @@ class Commands(commands.Cog):
         print(f'Logged in as: {self.bot.user.name}')
         print(f'With ID: {self.bot.user.id}')
         print('--------------------------')
-        # Database()
 
     @commands.command()
     async def all(self, ctx, *, league=""):
@@ -32,11 +31,16 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def live(self, ctx, league="", *, team=""):
-        [e, team_id] = MessageContent(league).returnLiveGame(team)
+        team_data = getTeamInfo(league, team)
+        e = MessageContent(league).returnLiveGame(team_data)
         msg = await ctx.send(embed=e)
 
         # add to db
-        SendList().add_interval_update(league, team, msg)
+        SendList().add_interval_update(league, team_data[0], msg)
+
+    @commands.command()
+    async def update(self, ctx, league="", *, team=""):
+        pass
 
     # test command
     @commands.command()

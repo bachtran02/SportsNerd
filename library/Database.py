@@ -25,7 +25,7 @@ class Database(commands.Cog):
         # self.db.insert({'league': 'nfl', 'data': {}})
         # self.prev_db.insert({'league': 'nfl', 'data': {}})
 
-    @tasks.loop(seconds=1.0)  # initial interval, after the first loop interval will be updated
+    @tasks.loop(seconds=5.0)  # initial interval, after the first loop interval will be updated
     async def updateDatabase(self):
         for league in self.LEAGUES:
             url = self.API_BASE_URL + league
@@ -43,9 +43,16 @@ class Database(commands.Cog):
             self.db.update({'data': data}, self.q.league == league)
 
         next_interval = round(self.findInterval())
-        print(next_interval)
+
+        # if next_interval > 45:
+        #     print(next_interval)
+
         self.updateDatabase.change_interval(seconds=next_interval)
-        await LiveUpdate(self.bot).send_interval_update()
+
+        # updater object
+        live_updater = LiveUpdate(self.bot)
+        await live_updater.send_interval_update()
+        await live_updater.send_event_update()
 
     def getChanges(self):
         game_with_changes = {}

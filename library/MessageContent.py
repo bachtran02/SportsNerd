@@ -79,7 +79,8 @@ class MessageContent:
         live_status = ['2', '22', '23']
         [team_id, team_abbr, team_full, logo] = [""] * 4
         if team:
-            [team_id, team_abbr, team_full, logo] = getTeamInfo(self.league, team)
+            team = getTeamInfo(self.league, team)
+            [team_id, team_abbr, team_full, logo] = team
             title = f'{self.league.upper()} Team Live Score'
             url = os.environ.get(f'{self.league.upper()}_SCOREBOARD_TEAM') + team_abbr
         else:
@@ -93,18 +94,19 @@ class MessageContent:
             if item['league'] == self.league:
                 game_list = item['data']['list-game']
                 for game in game_list:
+                    if team:
+                        for team in game['teams']:
+                            if team['id'] == team_id and game['status']['id'] in live_status:
+                                GameField(game).add(name=f'{logo} {team_full}', embed=e)
+                                found = True
+                                break
+                        continue
                     count = 1
                     if not game['status']['id'] in live_status:
                         continue
                     found = True
-                    if team:
-                        for team in game['teams']:
-                            if team['id'] == team_id:
-                                GameField(game).add(name=f'{logo} {team_full}', embed=e)
-                                break
-                    else:
-                        GameField(game).add(e, f"Game {count}")
-                        count += 1
+                    GameField(game).add(e, f"Game {count}")
+                    count += 1
         if not found:
             if team:
                 self.noGame(e, f'{logo} {team_full}', f"Team is not playing at the moment!")
@@ -112,4 +114,15 @@ class MessageContent:
                 self.noGame(e, 'There is no live game at the moment!',
                             f'This message will be updated when a game is on.\n'
                             f'Use "-all {self.league}" to see {self.league.upper()} games scheduled for today')
-        return [e, team_id]
+        return e
+
+    def returnGameWithUpdate(self, game_obj):
+
+        title = f"{self.league.upper()} Team Event Update"
+        url = os.environ.get(f'{self.league.upper()}_SCOREBOARD')
+        icon_url = os.environ.get(f'{self.league.upper()}_LOGO_URL')
+
+        e = self.createEmbed(title, url, icon_url)
+        GameField(game_obj).add(name="Live update", embed=e)
+
+        return e

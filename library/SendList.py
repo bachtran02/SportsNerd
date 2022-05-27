@@ -7,9 +7,6 @@ class SendList:
         self.iu_db = TinyDB('db/sendList/interval_update.json')
         self.eu_db = TinyDB('db/sendList/event_update.json')
 
-    def check_access(self):  # check if text channel is accessible
-        pass
-
     def check_duplicate(self):  # 1 channel can only have max 1 live-updated embed
         pass
 

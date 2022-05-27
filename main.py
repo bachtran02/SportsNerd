@@ -1,10 +1,10 @@
 import os
+import discord
 from discord.ext import commands
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# add discord.Intents to simplify some processes
 bot = commands.Bot(command_prefix="-", case_insensitive=True, help_command=None)
 
 extensions = ['Commands', 'library.Database']
