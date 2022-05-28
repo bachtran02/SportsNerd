@@ -1,8 +1,8 @@
 from discord.ext import commands
-from library.MessageContent import MessageContent
-from library.Utils import getTeamInfo
-from library.InputParser import InputParser
-from library.SendList import SendList
+from objects.MessageContent import MessageContent
+from objects.Utils import getTeamInfo
+from objects.InputParser import InputParser
+from objects.SendList import SendList
 
 
 class Commands(commands.Cog):
@@ -31,16 +31,19 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def live(self, ctx, league="", *, team=""):
-        team_data = getTeamInfo(league, team)
-        e = MessageContent(league).returnLiveGame(team_data)
+        team_id = getTeamInfo(league, team)[0]
+        e = MessageContent(league).returnLiveGame(team)
         msg = await ctx.send(embed=e)
-
-        # add to db
-        SendList().add_interval_update(league, team_data[0], msg)
+        # add to database
+        SendList().add_interval_update(league, team_id, msg)
 
     @commands.command()
     async def update(self, ctx, league="", *, team=""):
-        pass
+        team_id = getTeamInfo(league, team)[0]
+
+        # add to database
+        SendList().add_event_update(league, team_id, ctx.message)
+        await ctx.send("Following team successfully!")
 
     # test command
     @commands.command()

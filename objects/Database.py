@@ -7,8 +7,7 @@ from tinydb import TinyDB, Query
 from discord.ext import tasks
 from datetime import datetime, timedelta
 from discord.ext import commands
-
-from library.LiveUpdate import LiveUpdate
+from objects.LiveUpdate import LiveUpdate
 
 
 # update database and stuff
@@ -18,9 +17,10 @@ class Database(commands.Cog):
         self.API_BASE_URL = os.environ.get('API_BASE_URL')
         self.LEAGUES = ['nba']  # ['nba', 'nfl']
         self.q = Query()
-        self.db = TinyDB('db/apiData.json')
-        self.prev_db = TinyDB('db/prevApiData.json')
+        self.db = TinyDB('db/apiData/currApiData.json')
+        self.prev_db = TinyDB('db/apiData/prevApiData.json')
         self.updateDatabase.start()
+        self.count = 0
 
         # self.db.insert({'league': 'nfl', 'data': {}})
         # self.prev_db.insert({'league': 'nfl', 'data': {}})
@@ -28,31 +28,37 @@ class Database(commands.Cog):
     @tasks.loop(seconds=5.0)  # initial interval, after the first loop interval will be updated
     async def updateDatabase(self):
         for league in self.LEAGUES:
+
+            # # testing purposes
+            # prev = open('db/formatted/in_game.json')
+            # curr = open('db/formatted/post_game.json')
+            # prev_data = json.load(prev)
+            # curr_data = json.load(curr)
+
             url = self.API_BASE_URL + league
             response = requests.get(url)
-            data = json.loads(response.text)
+            curr_data = json.loads(response.text)
             # Handle 'Internal Server Error'
-            while 'list-game' not in data:
+            while 'list-game' not in curr_data:
                 print(f"API Error! Reconnecting...")
                 await asyncio.sleep(60)
                 response = requests.get(url)
-                data = json.loads(response.text)
+                curr_data = json.loads(response.text)
 
             prev_data = self.db.search(self.q.league == league)[0]['data']
             self.prev_db.update({'data': prev_data}, self.q.league == league)
-            self.db.update({'data': data}, self.q.league == league)
+            self.db.update({'data': curr_data}, self.q.league == league)
 
         next_interval = round(self.findInterval())
-
-        # if next_interval > 45:
-        #     print(next_interval)
-
         self.updateDatabase.change_interval(seconds=next_interval)
 
-        # updater object
-        live_updater = LiveUpdate(self.bot)
-        await live_updater.send_interval_update()
-        await live_updater.send_event_update()
+        # updater object, skip when loop runs for the first time
+        if self.count:
+            print(next_interval)
+            live_updater = LiveUpdate(self.bot)
+            await live_updater.send_interval_update()
+            await live_updater.send_event_update()
+        self.count += 1
 
     def getChanges(self):
         game_with_changes = {}
@@ -60,7 +66,6 @@ class Database(commands.Cog):
             prev_data = self.prev_db.search(self.q.league == league)[0]['data']
             curr_data = self.db.search(self.q.league == league)[0]['data']
             game_with_changes[league] = self.compareMap(prev_data, curr_data)
-
         return game_with_changes
 
     @staticmethod
@@ -129,3 +134,5 @@ class Database(commands.Cog):
 
 def setup(bot):
     bot.add_cog(Database(bot))
+
+# TODO: fix error in UpdateDatabase: don't know if next day has game or not

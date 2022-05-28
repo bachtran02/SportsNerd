@@ -1,7 +1,6 @@
 from tinydb import TinyDB
 
 
-#
 class SendList:
     def __init__(self):
         self.iu_db = TinyDB('db/sendList/interval_update.json')
@@ -17,7 +16,9 @@ class SendList:
         self.iu_db.insert({"league": league, "team-id": team, "guild-id": guild_id,
                            "channel-id": channel_id, "message-id": message_id})
 
-    def add_event_update(self):
-        pass
+    def add_event_update(self, league, team, msg):
+        channel_id = msg.channel.id
+        guild_id = msg.guild.id if msg.guild else ""
+        self.eu_db.insert({"league": league, "team-id": team, "guild-id": guild_id, "channel-id": channel_id})
 
 

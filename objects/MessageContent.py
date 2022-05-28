@@ -2,13 +2,13 @@ import discord
 import os
 from tinydb import TinyDB
 from datetime import datetime
-from library.GameField import GameField
-from library.Utils import getTeamInfo
+from objects.GameField import GameField
+from objects.Utils import getTeamInfo
 
 
 class MessageContent:
     def __init__(self, league):
-        self.data = TinyDB('db/apiData.json').all()
+        self.data = TinyDB('db/apiData/currApiData.json').all()
         self.validateLeague(league)
         self.league = league
 

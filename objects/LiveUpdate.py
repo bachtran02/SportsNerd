@@ -1,6 +1,6 @@
 from tinydb import TinyDB
-from library.MessageContent import MessageContent
-from library.Utils import getGameUpdates
+from objects.MessageContent import MessageContent
+from objects.Utils import getGameUpdates
 
 
 class LiveUpdate:  # in charge of updating live message, will be called when database is updated

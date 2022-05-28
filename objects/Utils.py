@@ -1,12 +1,12 @@
 from db.TeamData import TEAM_DATA
 from tinydb import TinyDB, Query
 
-LEAGUES = ['nba', 'nfl']
+LEAGUES = ['nba']  # ['nba', 'nfl']
 
 
 def getTeamInfo(league, team):
     if not team:
-        return []
+        return [""] * 4
     team_data = TEAM_DATA
     for teamID in team_data[league]:
         if team in team_data[league][teamID][:3] or teamID == team:
@@ -19,14 +19,15 @@ def getTeamInfo(league, team):
 
 
 def getGameUpdates():
-    db = TinyDB('db/apiData.json')
-    prev_db = TinyDB('db/prevApiData.json')
+    db = TinyDB('db/apiData/currApiData.json')
+    prev_db = TinyDB('db/apiData/prevApiData.json')
     q = Query()
-    league_with_updates = {}
+    league_with_updates = {'nba': {}, 'nfl': {}}
     have_update = False
     for league in LEAGUES:
         prev_data = prev_db.search(q.league == league)[0]['data']['list-game']
         curr_data = db.search(q.league == league)[0]['data']['list-game']
+
         [league_with_updates[league], have_update] = compareMap(prev_data, curr_data)
     return [league_with_updates, have_update]
 
@@ -54,6 +55,7 @@ def compareMap(prev_data, curr_data):
                 prev['status']['detail'] = "Start of 3rd"
             prev['last-play'] = "null"
             game_with_updates[teams] = prev
+
     if not len(game_with_updates):
-        return [game_with_updates, False]
-    return [{}, True]
+        return [{}, False]
+    return [game_with_updates, True]
