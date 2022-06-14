@@ -20,7 +20,7 @@ class Database(commands.Cog):
         self.db = TinyDB('db/apiData/currApiData.json')
         self.prev_db = TinyDB('db/apiData/prevApiData.json')
         self.updateDatabase.start()
-        self.count = 0
+        self.loop_count = 0
 
         # self.db.insert({'league': 'nfl', 'data': {}})
         # self.prev_db.insert({'league': 'nfl', 'data': {}})
@@ -40,7 +40,7 @@ class Database(commands.Cog):
             curr_data = json.loads(response.text)
             # Handle 'Internal Server Error'
             while 'list-game' not in curr_data:
-                print(f"API Error! Reconnecting...")
+                print(f"API Error! Retrying...")
                 await asyncio.sleep(60)
                 response = requests.get(url)
                 curr_data = json.loads(response.text)
@@ -50,15 +50,15 @@ class Database(commands.Cog):
             self.db.update({'data': curr_data}, self.q.league == league)
 
         next_interval = round(self.findInterval())
-        self.updateDatabase.change_interval(seconds=next_interval)
 
         # updater object, skip when loop runs for the first time
-        if self.count:
-            print(next_interval)
+        if self.loop_count:
+            print(f"Loop: {self.loop_count} - Interval: {next_interval}s")
             live_updater = LiveUpdate(self.bot)
             await live_updater.send_interval_update()
             await live_updater.send_event_update()
-        self.count += 1
+        self.loop_count += 1
+        self.updateDatabase.change_interval(seconds=next_interval)
 
     def getChanges(self):
         game_with_changes = {}
@@ -116,20 +116,9 @@ class Database(commands.Cog):
             if i[0] == '1':
                 return (i[1] - now).total_seconds()
 
-        next_day = now + timedelta(days=1) - timedelta(hours=8)
-        date = next_day.strftime("%Y%m%d")
-        next_day = self.fetchNextDay(date)
-        return (next_day - now).total_seconds()
-
-    def fetchNextDay(self, date):
-        url = f"{self.API_BASE_URL}nba/{date}"
-        data = {}
-        while 'list-game' not in data:
-            response = requests.get(url)
-            data = json.loads(response.text)
-            if 'list-game' not in data:
-                time.sleep(20)
-        return datetime.strptime(data['list-game'][0]['date'], '%Y-%m-%dT%H:%MZ')
+        # if reach here then all games are over
+        # set interval to one hour to save resources
+        return 3600
 
 
 def setup(bot):
