@@ -183,29 +183,197 @@ TEAM_DATA = {
     },
 
     "nfl": {
+        "1": [
+            "atl",
+            "falcons",
+            "atlanta falcons",
+            "<:atl:994017334333280347>"
+        ],
+        "2": [
+            "buf",
+            "bills",
+            "buffalo bills",
+            "<:buf:994017336736616458>"
+        ],
+        "3": [
+            "chi",
+            "bears",
+            "chicago bears",
+            "<:chi:994017339496484895>"
+        ],
         "4": [
            "cin",
            "bengals",
            "cincinnati bengals",
-           "<:bengals:936134271943442444>"
+           "<:cin:994017340742193263>"
+        ],
+        "5": [
+            "cle",
+            "browns",
+            "cleveland browns",
+            "<:cle:994017342432481372>"
+        ],
+        "6": [
+            "dal",
+            "cowboys",
+            "dallas cowboys",
+            "<:dal:994017344055689226>"
+        ],
+        "7": [
+            "den",
+            "broncos",
+            "denver broncos",
+            "<:den:994017345272029356>"
+        ],
+        "8": [
+            "det",
+            "lions",
+            "detroit lions",
+            "<:det:994017346794557480>"
+        ],
+        "9": [
+            "gb",
+            "packers",
+            "Green Bay Packers",
+            "<:gb:994017348132552754>"
+        ],
+        "10": [
+            "ten",
+            "titans",
+            "tennessee titans",
+            "<:ten:994017373235445831>"
+        ],
+        "11": [
+            "ind",
+            "colts",
+            "indianapolis colts",
+            "<:ind:994017350854651904>"
         ],
         "12": [
            "kc",
            "chiefs",
            "kansas city chiefs",
-           "<:chiefs:936134176590164019>"
+           "<:kc:994017353417371759>"
+        ],
+        "13": [
+            "lv",
+            "raiders",
+            "las vegas raiders",
+            "<:lv:994017357502611536>"
         ],
         "14": [
            "lar",
            "rams",
            "los angeles rams",
-           "<:rams:936134176619511891>"
+           "<:lar:994017355963301888>"
+        ],
+        "15": [
+            "mia",
+            "dolphins",
+            "miami dolphins",
+            "<:mia:994017359159377960>"
+        ],
+        "16": [
+            "min",
+            "vikings",
+            "minnesota vikings",
+            "<:min:994017360656748594>"
+        ],
+        "17": [
+            "ne",
+            "patriots",
+            "new england patriots",
+            "<:ne:994017362128932884>"
+        ],
+        "18": [
+            "no",
+            "saints",
+            "new orleans saints",
+            "<:no:994017363445944431>"
+        ],
+        "19": [
+            "nyg",
+            "giants",
+            "new york giants",
+            "<:nyg:994017364490326056>"
+        ],
+        "20": [
+            "nyj",
+            "jets",
+            "new york jets",
+            "<:nyj:994017365920583741>"
+        ],
+        "21": [
+            "phi",
+            "eagles",
+            "philadelphia eagles",
+            "<:phi:994017367384399993>"
+        ],
+        "22": [
+            "ari",
+            "cardinals",
+            "arizona cardinals",
+            "<:ari:994017332861083702>"
+        ],
+        "23": [
+            "pit",
+            "steelers",
+            "pittsburgh steelers",
+            "<:pit:994017368885960894>"
+        ],
+        "24": [
+            "lac",
+            "chargers",
+            "los angeles chargers",
+            "<:lac:994017354751156254>"
         ],
         "25": [
            "sf",
            "49ers",
            "san francisco 49ers",
-           "<:49ers:936134177038958592>"
+           "<:sf:994017370651758633>"
+        ],
+        "26": [
+            "sea",
+            "seahawks",
+            "seattle seahawks",
+            "<:sea:994017369955516518>"
+        ],
+        "27": [
+            "tb",
+            "buccaneers",
+            "tampa bay buccaneers",
+            "<:tb:994017372199452752>"
+        ],
+        "28": [
+            "wsh",
+            "commanders",
+            "washington commanders",
+            "<:wsh:994017374816719029>"
+        ],
+        "29": [
+            "car",
+            "panthers",
+            "carolina panthers",
+            "<:car:994017338053623869>"
+        ],
+        "30": [
+            "jax",
+            "jaguars",
+            "jacksonville jaguars",
+            "<:jax:994017352146497556>"
+        ],
+        "33": [
+            "bal",
+            "ravens",
+            "baltimore ravens",
+            "<:bal:994017335625138197>"
+        ],
+        "34": [
+            "hou",
+            "texans",
+            "houston texans",
+            "<:hou:994017349365682256>"
         ]
     }
 }

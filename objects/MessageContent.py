@@ -33,18 +33,23 @@ class MessageContent:
         title = f'{self.league.upper()} All Scores'
         url = os.environ.get(f'{self.league.upper()}_SCOREBOARD')
         icon_url = os.environ.get(f'{self.league.upper()}_LOGO_URL')
-        e = self.createEmbed(title, url, icon_url)
+        e1 = self.createEmbed(title, url, icon_url)
+        e2 = self.createEmbed(title, url, icon_url)
+        game_count = 0
+
         for item in self.data:
             if item['league'] == self.league:
                 game_list = item['data']['list-game']
-                count = 1
                 if not len(game_list):
-                    self.noGame(e, "\u200b", 'No game found')
+                    self.noGame(e1, "\u200b", 'No game found')
                 else:
                     for game in game_list:
-                        GameField(game).add(e, f"Game {count}")
-                        count += 1
-        return e
+                        game_count += 1
+                        if game_count <= 10:
+                            GameField(game).add(e1, f"Game {game_count}")
+                        else:
+                            GameField(game).add(e2, f"Game {game_count}")
+        return game_count, e1, e2
 
     def returnTeamGame(self, team="", date=""):
         [team_id, team_abbr, team_full, logo] = getTeamInfo(self.league, team)

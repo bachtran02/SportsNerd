@@ -15,7 +15,7 @@ class Database(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.API_BASE_URL = os.environ.get('API_BASE_URL')
-        self.LEAGUES = ['nba']  # ['nba', 'nfl']
+        self.LEAGUES = ['nba', 'nfl']  # ['nba', 'nfl']
         self.q = Query()
         self.db = TinyDB('db/apiData/currApiData.json')
         self.prev_db = TinyDB('db/apiData/prevApiData.json')

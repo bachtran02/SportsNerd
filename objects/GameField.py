@@ -6,10 +6,9 @@ from db.TeamData import TEAM_DATA
 
 class GameField:
     def __init__(self, game_dict):
+        self.team_data = TEAM_DATA
         [self.home, self.away] = self.getTeamInfo(game_dict['teams'])
         self.league = self.validateLeague(game_dict['league']['slug'])  # only support nba, nfl
-        self.team_data = TEAM_DATA
-
         self.link = self.parseLink(game_dict['date'], game_dict['id'])
         self.game_clock = self.parseGameClock(game_dict['status']['detail'], game_dict['status']['id'])
         self.display_score = self.parseScore(game_dict['score'])
@@ -36,10 +35,9 @@ class GameField:
                 'id': teams[i]['id'],
                 'short': teams[i]['shortDisplayName'],
                 'full': teams[i]['displayName'],
-                'records': teams[i]['records'][0]['summary'],
                 'abbrev': teams[i]['abbrev']
             }
-
+            team_info[li[i]]['records'] = teams[i]['records'][0]['summary'] if 'records' in teams[i] else ""
         return [team_info['home'], team_info['away']]
 
     @staticmethod
@@ -53,7 +51,10 @@ class GameField:
 
     def parseLink(self, date, game_id):
         url = os.environ.get(f'{self.league.upper()}_GAME_BASE_URL') + game_id
-        return f"**[{self.away['short']} ({self.away['records']}) @ {self.home['short']} ({self.home['records']}) | " \
+        away_record = f"  ({self.away['records']})" if self.away['records'] else ""
+        home_record = f"({self.home['records']}"  if self.home['records'] else ""
+
+        return f"**[{self.away['short']}{away_record} @ {self.home['short']}{home_record} | " \
                f"{self.parseTime(date)}]({url})**\n\n"
 
     @staticmethod
@@ -102,6 +103,9 @@ class GameField:
     @staticmethod
     def parseLeaders(data):
         leaders = ""
+        if not data:
+            leaders = "N/A"
+
         for leader in data:
             if not leader:
                 continue

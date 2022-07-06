@@ -11,7 +11,7 @@ class Commands(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        await self.bot.wait_until_ready()
+        # await self.bot.wait_until_ready()
         # await bot.change_presence(activity=discord.Game('-'))
         print('--------------------------')
         print(f'Logged in as: {self.bot.user.name}')
@@ -20,8 +20,10 @@ class Commands(commands.Cog):
 
     @commands.command()
     async def all(self, ctx, *, league=""):
-        e = MessageContent(league).returnAllGame()
-        await ctx.send(embed=e)
+        [count, e1, e2] = MessageContent(league).returnAllGame()
+        await ctx.send(embed=e1)
+        if count > 10:
+            await ctx.send(embed=e2)  # to avoid max char in embed error
 
     @commands.command()
     async def team(self, ctx, league="", *, team_date=""):
